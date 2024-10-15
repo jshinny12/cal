@@ -1,42 +1,58 @@
+import traceback
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-from .utils import create_user, add_category, add_task, update_category, update_task, login
+from .utils import create_user, add_category, add_task, update_category, update_task, login, find_user_by_user_id
 
 @csrf_exempt
 def register_user(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            _id_ = data['_id_']
+            _id = data['_id']
             password = data['password']
             categories = data.get('categories', [])
-
-            create_user(_id_, password, categories)
+            if find_user_by_user_id(_id):
+                return JsonResponse({"status": "error", "message": "User Exists"}, status=402)
+            else:
+                create_user(_id, password, categories)
             return JsonResponse({"status": "success", "message": "User registered successfully"}, status=201)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)}, status=500)
     return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
 @csrf_exempt
-def login(request):
+def login_user(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            _id_ = data['_id_']
+            _id = data['_id']
             password = data['password']
-            login(_id_, password)
-            return JsonResponse({"status": "success", "message": "User login"}, status=201)
+            if not _id or not password:
+                return JsonResponse({"status": "error", "message": "Missing user ID or password"}, status=400)
+            user = login(_id, password)
+            if user:  # Call the helper function
+                user_data = {
+                    "_id": user['_id'],
+                    "categories": user.get('categories', []),
+                    # You can include other fields if needed
+                }
+                return JsonResponse({"status": "success", "message": "User login successful", "user": user_data}, status=200)
+            else:
+                return JsonResponse({"status": "error", "message": "Invalid user ID or password"}, status=401)
+        
         except Exception as e:
-            return JsonResponse({"status": "error", "message": str(e)}, status=500)
-    return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+            print("Exception occurred during login:", e)
+            print(traceback.format_exc())
+            return JsonResponse({"status": "error", "message": "Internal server error: " + str(e)}, status=500)
+
 
 @csrf_exempt
 def add_category(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            user_id = data['_id_']
+            user_id = data['_id']
             category = data['category']
 
             add_category(user_id, category)
@@ -50,7 +66,7 @@ def add_task(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            user_id = data['_id_']
+            user_id = data['_id']
             category_name = data['category']
             task = {
                 "name": data['name'],
@@ -72,7 +88,7 @@ def update_category(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            user_id = data['_id_']
+            user_id = data['_id']
             category_name = data['category_name']
             updated_data = data['updated_data']  # Updated category details (name, color, etc.)
 
@@ -87,7 +103,7 @@ def update_task(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            user_id = data['_id_']
+            user_id = data['_id']
             category_name = data['category']
             task_name = data['task_name']
             updated_task_data = {

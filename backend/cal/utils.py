@@ -33,13 +33,13 @@ def create_user(user_id, password, categories=None):
 
 
 def login(user_id, user_pw):
-
     user = find_user_by_user_id(user_id)
 
     if user and "password" in user:
-        return check_password(user_pw, user['password'])
+        if check_password(user_pw, user['password']):
+            return user
 
-    return False
+    return None
 
 
 def add_category(user_id, category):

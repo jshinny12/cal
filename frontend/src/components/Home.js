@@ -5,7 +5,7 @@ const Home = () => {
     
   return (
     <div>
-      Home
+      {sessionStorage.getItem('user')}
     </div>
   )
 }
