@@ -18,7 +18,7 @@ def find_user_by_user_id(user_id):
     return users_collection.find_one({"_id": user_id})
 
 
-def create_user(user_id, password, categories=None):
+def createUser(user_id, password, categories=None):
     client = get_db_connection()
     db = client['cal']
     collection = db['users']
@@ -42,28 +42,63 @@ def login(user_id, user_pw):
     return None
 
 
-def add_category(user_id, category):
+def addCategory(user_id, category):
     client = get_db_connection()
     db = client['cal']
     collection = db['users']
-    collection.update_one(
-        {"_id": user_id},
-        {"$push": {"categories": category}}
-    )
+    user = collection.find_one({"_id": user_id})
+    if user:
+        categories = user.get('categories', [])
+        for cat in categories:
+            if cat['name'] == category:
+                return {"status": "error", "message": "Category already exists"}
+
+        new_category = {
+            "name": category,
+            "tasks": []  # Initialize with an empty list of tasks
+        }
+        collection.update_one(
+            {"_id": user_id},
+            {"$push": {"categories": new_category}}
+        )
+
+        # Return the updated user
+        return find_user_by_user_id(user_id)
+    else:
+        return {"status": "error", "message": "User not found"}
 
 
-def add_task(user_id, category_name, task):
+
+def addTask(user_id, category_name, task):
     client = get_db_connection()
     db = client['cal']
     collection = db['users']
+    
     collection.update_one(
-        {"_id": user_id},
-        {"categories.name": category_name},
-        {"$push": {"tasks": task}}
+        {"_id": user_id, "categories.name": category_name},
+        {"$push": {"categories.$.tasks": task}} 
     )
+    
+    return find_user_by_user_id(user_id)
+
+def deleteCategory(user_id, category_name):
+    client = get_db_connection()
+    db = client['cal']
+    collection = db['users']
+
+    # Remove the category with the specified name from the user's categories list
+    result = collection.update_one(
+        {"_id": user_id},
+        {"$pull": {"categories": {"name": category_name}}}
+    )
+    
+    if result.modified_count == 1:
+        return find_user_by_user_id(user_id)  # Return the updated user after deletion
+    else:
+        return {"status": "error", "message": "Category not found or could not be deleted"}
 
 
-def update_category(user_id, category_name, updated_category_data):
+def updateCategory(user_id, category_name, updated_category_data):
     client = get_db_connection()
     db = client['cal']
     collection = db['users']
@@ -76,19 +111,36 @@ def update_category(user_id, category_name, updated_category_data):
     )
 
 
-def update_task(user_id, category_name, task_name, updated_task_data):
+def updateTask(user_id, category_name, task_name, updated_task_data):
     client = get_db_connection()
     db = client['cal']
     collection = db['users']
 
-    # Use $set to update the specific fields of the task
-    return collection.update_one(
-        {"_id": user_id, "categories.name": category_name,
-            "categories.tasks.name": task_name},
-        {"$set": {f"categories.$[category].tasks.$[task].{
-            key}": value for key, value in updated_task_data.items()}},
+    # Update the specific fields of the task
+    collection.update_one(
+        {"_id": user_id},
+        {"$set": {f"categories.$[category].tasks.$[task].{key}": value for key, value in updated_task_data.items()}},
         array_filters=[
             {"category.name": category_name},
             {"task.name": task_name}
         ]
     )
+    return find_user_by_user_id(user_id)  # Return updated user
+
+def deleteTask(user_id, category_name, task_name):
+    client = get_db_connection()
+    db = client['cal']
+    collection = db['users']
+
+    # Remove the task with the specified name from the category's task list
+    result = collection.update_one(
+        {"_id": user_id, "categories.name": category_name},
+        {"$pull": {"categories.$.tasks": {"name": task_name}}}
+    )
+    
+    if result.modified_count == 1:
+        return find_user_by_user_id(user_id)  # Return the updated user after deletion
+    else:
+        return {"status": "error", "message": "Task not found or could not be deleted"}
+
+

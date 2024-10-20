@@ -28,6 +28,7 @@ const Register = () => {
 
       if (response.data.status === 'success') {
         // Registration successful, redirect to login page
+        alert("Registration Completed")
         navigate('/login');
       } else {
         // Registration failed, show error message

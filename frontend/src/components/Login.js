@@ -3,7 +3,7 @@ import { TextField, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const Login = () => {
+const Login = ({isLoggedIn, setIsLoggedIn}) => {
   const [formData, setFormData] = useState({
     _id: '',
     password: ''
@@ -28,8 +28,10 @@ const Login = () => {
       if (response.data.status === 'success') {
         // Registration successful, redirect to login page
         console.log(response)
-        sessionStorage.setItem('user', JSON.stringify(response.data.user))
-        navigate('/');
+        var user = JSON.stringify(response.data.user)
+        sessionStorage.setItem('user', user)
+        setIsLoggedIn(true)
+        navigate('/')
       } else {
         // Registration failed, show error message
          

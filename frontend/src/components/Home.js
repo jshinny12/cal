@@ -1,13 +1,16 @@
-import React from 'react'
+import React from 'react';
+import TaskManager from './TaskManager'
+import AddCategory from './AddCategory';
+import AddTask from './AddTask';
 
 const Home = () => {
 
-    
-  return (
-    <div>
-      {sessionStorage.getItem('user')}
-    </div>
-  )
-}
 
-export default Home
+  return (
+    <>
+      <TaskManager />
+    </>
+  );
+};
+
+export default Home;
